@@ -35,11 +35,16 @@ class AttachController extends Controller
 
         $query = $field->resourceClass::newModel();
 
-        return $field->resourceClass::relatableQuery($request, $query)->get()
+        $type = $field->type;
+        return $field->resourceClass::relatableQuery($request, $query)
+            ->when($type, function ($query, $type) {
+                $query->where('type', $type);
+            })
+            ->get()
             ->mapInto($field->resourceClass)
             ->filter(function ($resource) use ($request, $field) {
                 return $request->newResource()->authorizedToAttach($request, $resource->resource);
-            })->map(function($resource) {
+            })->map(function ($resource) {
                 return [
                     'display' => $resource->title(),
                     'value' => $resource->getKey(),
