@@ -15,6 +15,8 @@ class AttachMany extends Field
 
     public $height = '300px';
 
+    public $type = false;
+
     public $fullWidth = false;
 
     public $showToolbar = true;
@@ -44,9 +46,18 @@ class AttachMany extends Field
         $this->fillUsing(function($request, $model, $attribute, $requestAttribute) use($resource) {
             if(is_subclass_of($model, 'Illuminate\Database\Eloquent\Model')) {
                 $model::saved(function($model) use($attribute, $request) {
-                    $model->$attribute()->sync(
-                        json_decode($request->$attribute, true)
-                    );
+                    if ($this->type) {
+                        $toDetach = $model->$attribute()->pluck('id');
+                        $model->$attribute()->detach($toDetach);
+                        $model->$attribute()->syncWithoutDetaching(
+                            json_decode($request->$attribute, true)
+                        );
+                    } else {
+                        $model->$attribute()->sync(
+                            json_decode($request->$attribute, true)
+                        );
+                    }
+
                 });
 
                 unset($request->$attribute);
@@ -70,7 +81,8 @@ class AttachMany extends Field
             'fullWidth' => $this->fullWidth,
             'showCounts' => $this->showCounts,
             'showPreview' => $this->showPreview,
-            'showToolbar' => $this->showToolbar
+            'showToolbar' => $this->showToolbar,
+            'type' => $this->type,
         ]);
     }
 
@@ -120,6 +132,13 @@ class AttachMany extends Field
     public function showPreview($showPreview=true)
     {
         $this->showPreview = $showPreview;
+
+        return $this;
+    }
+
+    public function type($type = false)
+    {
+        $this->type = $type;
 
         return $this;
     }
